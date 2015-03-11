@@ -49,9 +49,8 @@ if CURRENT_SCRIPT_USERID == 0:
 
 if _DEBUG: print "Running as: ", CURRENT_FINDER_USERID, CURRENT_FINDER_HOMEDIR
 
-if re.match("HOMEDIR.*", _ARG_LIST[2]):
-    _ARG_LIST[2] = re.sub("HOMEDIR", CURRENT_FINDER_HOMEDIR, _ARG_LIST[2])
-    if _DEBUG: print "HOMEDIR Path changed to %s"% _ARG_LIST[2]
+
+
 
 #########################################################################################
 # Help Menu
@@ -80,6 +79,19 @@ def SHOW_HELP_MENU():
     print "\n"
     exit()
 
+
+
+
+#########################################################################################
+# Substitue Home Directory for HOMEDIR
+#########################################################################################
+if _ARG_LIST[1].upper() != "LIST":
+    if re.match("HOMEDIR.*", _ARG_LIST[2]):
+        _ARG_LIST[2] = re.sub("HOMEDIR", CURRENT_FINDER_HOMEDIR, _ARG_LIST[2])
+        if _DEBUG: print "HOMEDIR Path changed to %s"% _ARG_LIST[2]
+    if re.match("HOMEDIR.*", _ARG_LIST[3]):
+        _ARG_LIST[3] = re.sub("HOMEDIR", CURRENT_FINDER_HOMEDIR, _ARG_LIST[3])
+        if _DEBUG: print "HOMEDIR Path changed to %s"% _ARG_LIST[3]
 #########################################################################################
 # Check to make sure we have the right variables
 #########################################################################################
@@ -101,6 +113,9 @@ if len(_ARG_LIST) == 4 and _ACTION.upper() not in ("AFTER","MOVE"):
 elif len(_ARG_LIST) == 4 and _ACTION.upper() in ("AFTER","MOVE"):
     _ITEM1 = _ARG_LIST[2]
     _ITEM2 = _ARG_LIST[3]
+
+
+
 
 #########################################################################################
 # Make Human Readable Sidebar List and update the snapshot
@@ -142,6 +157,14 @@ if _ACTION.upper() == "LIST":
     PRINT_SIDEBAR_LIST_HR()
     exit()
 
+
+#########################################################################################
+# Get the basename of a path
+#########################################################################################
+def GET_BASE_PATH(path):
+    basepath = os.path.basename(os.path.normpath(path))
+    return basepath
+                            
 #########################################################################################
 # _ACTION Move Items
 # Take two items by their name and put one after the other
@@ -153,11 +176,20 @@ def MOVE_ITEMS(this,that):
     item_After = that.upper()
     
     if item_To_Move not in _SIDEBAR_NAME_LIST:
-        print "%s does not appear in the Sidebar"% item_To_Move
-        exit()
+        base = GET_BASE_PATH(item_To_Move)
+        if base.upper() not in _SIDEBAR_NAME_LIST:
+            print "%s does not appear in the Sidebar"% item_To_Move
+            exit()
+        else:
+            item_To_Move = base
+
     if item_After not in _SIDEBAR_NAME_LIST:
-        print "%s does not appear in the Sidebar"% item_After
-        exit()
+        base = GET_BASE_PATH(item_After)
+        if base.upper() not in _SIDEBAR_NAME_LIST:
+            print "%s does not appear in the Sidebar"% item_To_Move
+            exit()
+        else:
+            item_After = base
 
     if _DEBUG: print "Moving %s after %s"% (item_To_Move,item_After)
     
@@ -190,29 +222,30 @@ def GET_NTH_ITEM_NAME(N):
 #########################################################################################
 # Test to see if the Item we are adding is real
 #########################################################################################
-os.chdir("/")
-if re.match("[^\/.*]",_ITEM1):
-    print "Always use a full path when adding an Item. It should start with a forward slash, for example\n /Applications"
-    exit()
-if os.path.exists(_ITEM1):
-  pass
-else:
-    print "%s does not seem to exist."% _ITEM1
-    exit()
+if _ACTION.upper() in ("FIRST","LAST","AFTER"):
+    os.chdir("/")
+    if re.match("[^\/.*]",_ITEM1):
+        print "Always use a full path when adding an Item. It should start with a forward slash, for example\n /Applications"
+        exit()
+    if os.path.exists(_ITEM1):
+      pass
+    else:
+        print "%s does not seem to exist."% _ITEM1
+        exit()
 
-NEW_ITEM = "file://localhost" + _ITEM1
-if _DEBUG: print "NEW_ITEM: %s"% NEW_ITEM
+    NEW_ITEM = "file://localhost" + _ITEM1
+    if _DEBUG: print "NEW_ITEM: %s"% NEW_ITEM
 #########################################################################################
 # Create NSURL
 #########################################################################################
-ITEM_TO_ADD = Cocoa.NSURL.alloc().init()
-ITEM_TO_ADD = Cocoa.NSURL.URLWithString_(NEW_ITEM)
-if _DEBUG: print "ITEM_TO_ADD: %s"% ITEM_TO_ADD
+    ITEM_TO_ADD = Cocoa.NSURL.alloc().init()
+    ITEM_TO_ADD = Cocoa.NSURL.URLWithString_(NEW_ITEM)
+    if _DEBUG: print "ITEM_TO_ADD: %s"% ITEM_TO_ADD
 
 #########################################################################################
 # _ACTION Write to Sidebar
 #########################################################################################
-if _ACTION.upper() in ("FIRST","LAST","AFTER"):
+
     MAKE_SIDEBAR_LIST_HR()
     LaunchServices.LSSharedFileListInsertItemURL(_SIDEBAR_ITEMS,LaunchServices.kLSSharedFileListItemBeforeFirst,None,None,ITEM_TO_ADD,None,None)
 
@@ -244,10 +277,18 @@ if _ACTION.upper() in ("FIRST","LAST","AFTER"):
 if _ACTION.upper() == "REMOVE":
     MAKE_SIDEBAR_LIST_HR()
     if _ITEM1.upper() not in _SIDEBAR_NAME_LIST:
-        print "%s does not appear in the Sidebar"%  _ITEM1
+        base = GET_BASE_PATH(_ITEM1)
+        if base.upper() not in _SIDEBAR_NAME_LIST:
+            print "%s does not appear in the Sidebar"%  _ITEM1
+        else:
+            for item in _SIDEBAR_ITEMS_SNAPSHOT[0]:
+                item_Name = LaunchServices.LSSharedFileListItemCopyDisplayName(item)
+                if base.upper() == item_Name.upper(): LaunchServices.LSSharedFileListItemRemove(_SIDEBAR_ITEMS, item)
     else:
         for item in _SIDEBAR_ITEMS_SNAPSHOT[0]:
             item_Name = LaunchServices.LSSharedFileListItemCopyDisplayName(item)
             if _ITEM1.upper() == item_Name.upper(): LaunchServices.LSSharedFileListItemRemove(_SIDEBAR_ITEMS, item)
 
 
+
+CoreFoundation.CFPreferencesAppSynchronize("com.apple.sidebarlists")
