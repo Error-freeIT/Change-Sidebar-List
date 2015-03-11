@@ -1,5 +1,5 @@
 #!/usr/bin/python
-import commands, os, sys, getopt, getpass, platform, plistlib, re, CoreFoundation, Cocoa, LaunchServices, time
+import commands, os, sys, getopt, getpass, platform, pwd, plistlib, re, CoreFoundation, Cocoa, LaunchServices, time, subprocess
 
 #########################################################################################
 # Change this to True if you are going to use this with a Casper Policy
@@ -9,10 +9,13 @@ import commands, os, sys, getopt, getpass, platform, plistlib, re, CoreFoundatio
 #########################################################################################
 CASPER_MODE = False
 
+
+
 #########################################################################################
 # Global Variables
 #########################################################################################
 _DEBUG = False
+
 
 _ARG_LIST = []
 _SIDEBAR_LIST_HR = []
@@ -29,6 +32,27 @@ else:
 
 if _DEBUG: print _ARG_LIST
 
+
+#########################################################################################
+# Switch to Current Finder User to run the rest of the script
+#########################################################################################
+CURRENT_SCRIPT_USERID = os.getuid()
+CURRENT_SCRIPT_USERNAME = getpass.getuser()
+CURRENT_FINDER_USERNAME = os.getlogin()
+CURRENT_FINDER_USERID = pwd.getpwnam(CURRENT_FINDER_USERNAME).pw_uid
+CURRENT_FINDER_HOMEDIR = pwd.getpwnam(CURRENT_FINDER_USERNAME).pw_dir
+
+
+if CURRENT_SCRIPT_USERID == 0:
+    if _DEBUG: print "This script is run as Root, trying to run as %s"% CURRENT_FINDER_USERNAME
+    os.setuid(CURRENT_FINDER_USERID)
+
+if _DEBUG: print "Running as: ", CURRENT_FINDER_USERID, CURRENT_FINDER_HOMEDIR
+
+if re.match("HOMEDIR.*", _ARG_LIST[2]):
+    _ARG_LIST[2] = re.sub("HOMEDIR", CURRENT_FINDER_HOMEDIR, _ARG_LIST[2])
+    if _DEBUG: print "HOMEDIR Path changed to %s"% _ARG_LIST[2]
+
 #########################################################################################
 # Help Menu
 #########################################################################################
@@ -44,6 +68,15 @@ def SHOW_HELP_MENU():
     print "%-20s %s"% ("remove [Name]", "Remove Exisiting Item from the Sidebar")
     print "%-20s %s"% ("after [Path] [Name]", "Add Directory to After Existing Item")
     print "%-20s %s"% ("move [Name] [Name]", "Move Existing Item After Existing Item")
+    print "-" * 20, "-" * 60
+    print "NOTES"
+    print "All paths should be an absolute path and begin with a forward slash. Unless you want to specify the current User's"
+    print "Home Directory. In that case use HOMEDIR as a variable. See example below."
+    print "-" * 20, "-" * 60
+    print "Examples"
+    print "%s after /Applications Downloads\t\tAdd Applications after Downloads"% _ARG_LIST[0]
+    print "%s first HOMEDIR\t\tAdd the user's Home Directory first in the list"% _ARG_LIST[0]
+    print "%s last HOMEDIR/Music\tAdd the user's Music Directory last in the list"% _ARG_LIST[0]
     print "\n"
     exit()
 
@@ -55,7 +88,6 @@ if len(_ARG_LIST) < 2: SHOW_HELP_MENU()
 _ACTION = _ARG_LIST[1]
 
 if len(_ARG_LIST) == 2 and _ACTION.upper() != "LIST":
-    print "Bad Arguments"
     SHOW_HELP_MENU()
 
 if len(_ARG_LIST) == 3 and _ACTION.upper() not in ("FIRST","LAST","REMOVE"):
@@ -156,8 +188,18 @@ def GET_NTH_ITEM_NAME(N):
 
 
 #########################################################################################
-# ADDING ITEMS
+# Test to see if the Item we are adding is real
 #########################################################################################
+os.chdir("/")
+if re.match("[^\/.*]",_ITEM1):
+    print "Always use a full path when adding an Item. It should start with a forward slash, for example\n /Applications"
+    exit()
+if os.path.exists(_ITEM1):
+  pass
+else:
+    print "%s does not seem to exist."% _ITEM1
+    exit()
+
 NEW_ITEM = "file://localhost" + _ITEM1
 if _DEBUG: print "NEW_ITEM: %s"% NEW_ITEM
 #########################################################################################
@@ -173,6 +215,9 @@ if _DEBUG: print "ITEM_TO_ADD: %s"% ITEM_TO_ADD
 if _ACTION.upper() in ("FIRST","LAST","AFTER"):
     MAKE_SIDEBAR_LIST_HR()
     LaunchServices.LSSharedFileListInsertItemURL(_SIDEBAR_ITEMS,LaunchServices.kLSSharedFileListItemBeforeFirst,None,None,ITEM_TO_ADD,None,None)
+
+
+
 
     if _ACTION.upper() == "FIRST":
         MAKE_SIDEBAR_LIST_HR()
@@ -204,7 +249,5 @@ if _ACTION.upper() == "REMOVE":
         for item in _SIDEBAR_ITEMS_SNAPSHOT[0]:
             item_Name = LaunchServices.LSSharedFileListItemCopyDisplayName(item)
             if _ITEM1.upper() == item_Name.upper(): LaunchServices.LSSharedFileListItemRemove(_SIDEBAR_ITEMS, item)
-
-
 
 
