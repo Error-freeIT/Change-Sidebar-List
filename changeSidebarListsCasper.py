@@ -89,7 +89,7 @@ if _ARG_LIST[1].upper() != "LIST":
     if re.match("HOMEDIR.*", _ARG_LIST[2]):
         _ARG_LIST[2] = re.sub("HOMEDIR", CURRENT_FINDER_HOMEDIR, _ARG_LIST[2])
         if _DEBUG: print "HOMEDIR Path changed to %s"% _ARG_LIST[2]
-    if re.match("HOMEDIR.*", _ARG_LIST[3]):
+    if len(_ARG_LIST) > 3 and re.match("HOMEDIR.*", _ARG_LIST[3]):
         _ARG_LIST[3] = re.sub("HOMEDIR", CURRENT_FINDER_HOMEDIR, _ARG_LIST[3])
         if _DEBUG: print "HOMEDIR Path changed to %s"% _ARG_LIST[3]
 #########################################################################################
