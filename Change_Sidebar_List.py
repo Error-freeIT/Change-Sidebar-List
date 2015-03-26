@@ -1,21 +1,29 @@
 #!/usr/bin/python
-import commands, os, sys, getopt, getpass, platform, pwd, plistlib, re, CoreFoundation, Cocoa, LaunchServices, time, subprocess
-
+CASPER_MODE = False
 #########################################################################################
 # Change this to True if you are going to use this with a Casper Policy
 # Parameter 4: Action (first, last, remove, after, move)
 # Parameter 5: Path (If adding) Name (If moving or Removing)
 # Parameter 6: Name (Of item to add after or move after)
 #########################################################################################
-CASPER_MODE = False
-
-
-
+#########################################################################################
+#     Beg for money :(
+#########################################################################################
+# Written by Matt Schalk
+# I write scripts like this in my spare time to help people do their
+# jobs they get paid to do.
+# If you found this useful and would like to tip me you can use:
+#
+# https://cash.me/$matt4836
+#
+#########################################################################################
+#     Import commands
+#########################################################################################
+import commands, os, sys, getopt, getpass, platform, pwd, plistlib, re, CoreFoundation, Cocoa, LaunchServices, time, subprocess
 #########################################################################################
 # Global Variables
 #########################################################################################
 _DEBUG = False
-
 
 _ARG_LIST = []
 _SIDEBAR_LIST_HR = []
@@ -32,7 +40,6 @@ else:
 
 if _DEBUG: print _ARG_LIST
 
-
 #########################################################################################
 # Switch to Current Finder User to run the rest of the script
 #########################################################################################
@@ -42,15 +49,11 @@ CURRENT_FINDER_USERNAME = os.getlogin()
 CURRENT_FINDER_USERID = pwd.getpwnam(CURRENT_FINDER_USERNAME).pw_uid
 CURRENT_FINDER_HOMEDIR = pwd.getpwnam(CURRENT_FINDER_USERNAME).pw_dir
 
-
 if CURRENT_SCRIPT_USERID == 0:
     if _DEBUG: print "This script is run as Root, trying to run as %s"% CURRENT_FINDER_USERNAME
     os.setuid(CURRENT_FINDER_USERID)
 
 if _DEBUG: print "Running as: ", CURRENT_FINDER_USERID, CURRENT_FINDER_HOMEDIR
-
-
-
 
 #########################################################################################
 # Help Menu
@@ -71,7 +74,12 @@ def SHOW_HELP_MENU():
     print "NOTES"
     print "All paths should be an absolute path and begin with a forward slash. Unless you want to specify the current User's"
     print "Home Directory. In that case use HOMEDIR as a variable. See example below."
-    print "-" * 20, "-" * 60
+    
+    print "-" * 80
+    print "\nI write scripts like this in my spare time to help people do their jobs they get paid to do."
+    print "If you found this useful and would like to tip me you can use:\n\thttps://cash.me/$matt4836\n"
+    print "-" * 80
+
     print "Examples"
     print "%s after /Applications Downloads\t\tAdd Applications after Downloads"% _ARG_LIST[0]
     print "%s first HOMEDIR\t\tAdd the user's Home Directory first in the list"% _ARG_LIST[0]
@@ -82,6 +90,7 @@ def SHOW_HELP_MENU():
 
 
 
+if len(_ARG_LIST) < 2: SHOW_HELP_MENU()
 #########################################################################################
 # Substitue Home Directory for HOMEDIR
 #########################################################################################
@@ -95,7 +104,7 @@ if _ARG_LIST[1].upper() != "LIST":
 #########################################################################################
 # Check to make sure we have the right variables
 #########################################################################################
-if len(_ARG_LIST) < 2: SHOW_HELP_MENU()
+
 
 _ACTION = _ARG_LIST[1]
 
