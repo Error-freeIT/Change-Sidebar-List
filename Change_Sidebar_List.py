@@ -34,6 +34,7 @@ _SIDEBAR_ITEMS = ""
 if CASPER_MODE:
     _ARG_LIST.append(sys.argv[0])
     for args in sys.argv[4:]:
+    if args == '': pass
         _ARG_LIST.append(args)
 else:
     _ARG_LIST = sys.argv
