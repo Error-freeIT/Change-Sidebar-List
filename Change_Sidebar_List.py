@@ -19,11 +19,39 @@ CASPER_MODE = False
 #########################################################################################
 #     Import commands
 #########################################################################################
-import commands, os, sys, getopt, getpass, platform, pwd, plistlib, re, CoreFoundation, Cocoa, LaunchServices, time, subprocess
+import commands, os, sys, getopt, getpass, platform, pwd, plistlib, re, CoreFoundation, Cocoa, LaunchServices, time, shutil
 #########################################################################################
-# Global Variables
+# Debug Mode
 #########################################################################################
 _DEBUG = False
+#########################################################################################
+# Switch to Current Finder User to run the rest of the script
+#########################################################################################
+CURRENT_SCRIPT_USERID = os.getuid()
+CURRENT_SCRIPT_USERNAME = getpass.getuser()
+CURRENT_FINDER_USERNAME = os.getlogin()
+CURRENT_FINDER_USERID = pwd.getpwnam(CURRENT_FINDER_USERNAME).pw_uid
+CURRENT_FINDER_HOMEDIR = pwd.getpwnam(CURRENT_FINDER_USERNAME).pw_dir
+
+if _DEBUG: print sys.argv
+
+if CURRENT_SCRIPT_USERID == 0:
+    if _DEBUG: print "This script is run as Root, trying to run as %s"% CURRENT_FINDER_USERNAME
+    # Rerun the entire script again using the su command. The buit in Python commands are not respecting UID
+    TEMP_FILE_PATH = "/private/tmp/sidebar.py"
+    shutil.copy(sys.argv[0], TEMP_FILE_PATH)
+    os.chmod(TEMP_FILE_PATH, 0755)
+    if sys.argv > 3 and CASPER_MODE: sys.argv[3] = CURRENT_FINDER_USERNAME
+    ARGJOIN = "'%s'"% "' '".join(sys.argv[1:])
+    RERUNCOMMAND = "su %s -c \"python %s %s\""% (CURRENT_FINDER_USERNAME, TEMP_FILE_PATH, ARGJOIN)
+    if _DEBUG: print "Rerunning with ", RERUNCOMMAND
+    os.system(RERUNCOMMAND)
+    time.sleep(2)
+    os.remove(TEMP_FILE_PATH)
+    exit()
+
+
+if _DEBUG: print "Running as: ", CURRENT_SCRIPT_USERID
 
 _ARG_LIST = []
 _SIDEBAR_LIST_HR = []
@@ -34,27 +62,15 @@ _SIDEBAR_ITEMS = ""
 if CASPER_MODE:
     _ARG_LIST.append(sys.argv[0])
     for args in sys.argv[4:]:
-    if args == '': continue
+        if args == '': continue
         _ARG_LIST.append(args)
 else:
     _ARG_LIST = sys.argv
 
 if _DEBUG: print _ARG_LIST
 
-#########################################################################################
-# Switch to Current Finder User to run the rest of the script
-#########################################################################################
-CURRENT_SCRIPT_USERID = os.getuid()
-CURRENT_SCRIPT_USERNAME = getpass.getuser()
-CURRENT_FINDER_USERNAME = os.getlogin()
-CURRENT_FINDER_USERID = pwd.getpwnam(CURRENT_FINDER_USERNAME).pw_uid
-CURRENT_FINDER_HOMEDIR = pwd.getpwnam(CURRENT_FINDER_USERNAME).pw_dir
 
-if CURRENT_SCRIPT_USERID == 0:
-    if _DEBUG: print "This script is run as Root, trying to run as %s"% CURRENT_FINDER_USERNAME
-    os.setuid(CURRENT_FINDER_USERID)
 
-if _DEBUG: print "Running as: ", CURRENT_FINDER_USERID, CURRENT_FINDER_HOMEDIR
 
 #########################################################################################
 # Help Menu
@@ -89,7 +105,10 @@ def SHOW_HELP_MENU():
     exit()
 
 
+_ACTION = _ARG_LIST[1]
 
+if len(_ARG_LIST) == 2 and _ACTION.upper() != "LIST":
+    SHOW_HELP_MENU()
 
 if len(_ARG_LIST) < 2: SHOW_HELP_MENU()
 #########################################################################################
@@ -248,8 +267,9 @@ if _ACTION.upper() in ("FIRST","LAST","AFTER"):
 #########################################################################################
 # Create NSURL
 #########################################################################################
+    STRINGURL = Cocoa.NSString.alloc().initWithString_(NEW_ITEM)
     ITEM_TO_ADD = Cocoa.NSURL.alloc().init()
-    ITEM_TO_ADD = Cocoa.NSURL.URLWithString_(NEW_ITEM)
+    ITEM_TO_ADD = Cocoa.NSURL.URLWithString_(STRINGURL.stringByAddingPercentEscapesUsingEncoding_(Cocoa.NSASCIIStringEncoding))
     if _DEBUG: print "ITEM_TO_ADD: %s"% ITEM_TO_ADD
 
 #########################################################################################
@@ -300,5 +320,11 @@ if _ACTION.upper() == "REMOVE":
             if _ITEM1.upper() == item_Name.upper(): LaunchServices.LSSharedFileListItemRemove(_SIDEBAR_ITEMS, item)
 
 
-
+CoreFoundation.CFPreferencesSynchronize(CoreFoundation.kCFPreferencesAnyApplication,CoreFoundation.kCFPreferencesCurrentUser,CoreFoundation.kCFPreferencesCurrentHost)
 CoreFoundation.CFPreferencesAppSynchronize("com.apple.sidebarlists")
+
+
+if _DEBUG: print CoreFoundation.CFPreferencesAppSynchronize("com.apple.sidebarlists")
+
+
+exit()
