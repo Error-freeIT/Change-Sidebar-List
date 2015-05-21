@@ -1,11 +1,14 @@
 #!/bin/bash
 
 # Author: Michael Page (21/05/15)
+# Information regarding this script can be found at: http://errorfreeit.com.au/blog/2015/5/22/deploy-finders-sidebar-list-favorites
 
 # Usage
 # Install changesidebarlist.pkg: https://github.com/Error-freeIT/Change-Sidebar-List/releases/latest
 # Install outset.pkg: https://github.com/chilcote/outset/releases/latest
 # Copy this script into /usr/local/outset/login-once/
+# Correct the scripts file permissions:
+# sudo chown root:wheel /usr/local/outset && chmod -R 755 /usr/local/outset && xattr -rc /usr/local/outset
 
 # List of intended sidebar favourites.
 FAVORITES=( "/Applications" 
